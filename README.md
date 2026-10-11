@@ -1,0 +1,82 @@
+# NextHRM 1
+
+ระบบ HRM หลายบริษัทจาก [HRM System Design](https://app.notion.com/p/HRM-System-Design-3f2f08f5233681c399a9e9ce593e500a) และ Version 3: **React 19 + Tailwind CSS 4 + Bun + Hono + SQLite** พร้อมหน้าจอภาษาไทย/อังกฤษและโหมดมืด
+
+รองรับพื้นที่ทำงาน/บริษัท, บุคลากรและประวัติ, ตารางทำงาน/ลงเวลา/OT, คำขอลาและบัญชีวันลา, เงินเดือนและสลิป, ประกาศ/แจ้งเตือน WebSocket, สิทธิ์ตามบทบาทและขอบเขต, การย้าย/ทำงานหลายบริษัท, รายงานและ audit log
+
+อ่าน [ขอบเขตและข้อจำกัด](docs/COVERAGE.md) ก่อนนำไปใช้จริง รุ่นนี้ยังมีรายการขั้นสูงของ spec ที่ไม่ครบ และต้องตรวจรับกฎ HR/เงินเดือนกับผู้ใช้งานจริง
+
+## ติดตั้ง
+
+ต้องมี Bun 1.4.3+ และ Git; Node 22+ ใช้สำหรับ browser tests
+
+```bash
+git clone https://github.com/codercamera/nexthrm1.git
+cd nexthrm1
+bun install
+cp .env.example .env
+openssl rand -hex 32
+```
+
+ใส่ค่าที่สร้างใน `ENCRYPTION_KEY` และตั้ง `SETUP_EMAIL`, `SETUP_PASSWORD` (อย่างน้อย 12 ตัวอักษร), `SETUP_WORKSPACE`, `SETUP_COMPANY` ใน `.env` จากนั้น:
+
+```bash
+bun run setup
+bun run build
+bun start
+```
+
+เปิด http://localhost:3000 เข้าสู่ระบบด้วยอีเมล/รหัสผ่านที่ตั้งไว้ และรหัส workspace ที่ได้จาก setup (`tenants.code`) ไม่มีบัญชี production เริ่มต้น ลบ `SETUP_PASSWORD` จากไฟล์หลังตั้งค่าแล้ว เก็บ encryption key แยกและสำรองอย่างปลอดภัย เพราะเปลี่ยนหรือลืม key จะอ่านข้อมูลที่เข้ารหัสไว้ไม่ได้
+
+`bun run dev` build หน้าจอและ watch backend; เมื่อแก้ frontend ให้รัน build อีกครั้ง
+
+## ทดสอบ
+
+```bash
+bun run verify
+# TypeScript + Bun API/transport/accrual tests + production build
+```
+
+สำหรับการทดสอบ Chromium ใช้ฐานข้อมูลทิ้งได้ แยกจากข้อมูลจริง:
+
+```bash
+bunx playwright install chromium
+DB_PATH=data/qa.sqlite SETUP_EMAIL=admin@example.test SETUP_PASSWORD=Your-test-password-123 bun run demo
+TEST_PASSWORD=Your-test-password-123 TEST_START_SERVER=1 bun run test:browser
+```
+
+ต้องมี `ENCRYPTION_KEY` ใน `.env` สำหรับ demo และ server และให้ `TEST_DB_PATH` ตรงกับฐานข้อมูล demo หากเปลี่ยน path; browser test รับค่าตัวแปรผ่าน environment ของ Node ไม่โหลด `.env` อัตโนมัติ จึง export `ENCRYPTION_KEY` ก่อนรัน (`bun --env-file=.env run test:browser` ใช้โหลด environment ได้) คำสั่ง demo ปฏิเสธ production และไม่รันอัตโนมัติ
+
+ผลทดสอบและภาพหน้าจออยู่ใน [TEST_REPORT](docs/TEST_REPORT.md) และ workflow CI อยู่ใน `.github/workflows/ci.yml`
+
+## โครงสร้าง
+
+- `src/client`: React, reusable dialogs/forms/tables, mobile navigation, employee print report
+- `src/server`: Hono APIs, authentication/scopes, employees, time/leave, payroll, announcements, administration
+- `migrations`: schema จาก spec 67 ตาราง + support tables/indexes/triggers
+- `scripts`: setup, demo, migrations, backup/restore
+- `tests`: API/regression, real HTTP/WebSocket/file transport, Chromium browser checks
+- `docs/SPEC.md`, `docs/SPEC-V3.md`: ข้อกำหนดที่ใช้พัฒนา
+
+API ทุกบริษัทเริ่มด้วย `/api/c/:companyId/`; server ตรวจ tenant, active company access, permissions และ employee scope ไม่อาศัยการซ่อนเมนูบน frontend เงินเก็บเป็น integer satang และเวลาการลาคิดเป็นนาที
+
+## ใช้งานและสำรองข้อมูล
+
+สร้าง master data และกำหนด schedule ให้พนักงานก่อนทำ attendance/payroll ตั้งค่าภาษี/ประกันสังคมพร้อมแหล่งอ้างอิงและผู้ตรวจสอบใน settings ก่อนคำนวณเงินเดือน ผู้จัดเตรียม ผู้ตรวจ และผู้อนุมัติต้องเป็นคนละคน ตรวจบัญชีธนาคารและข้อมูลภาษีของพนักงานก่อนอนุมัติ
+
+```bash
+bun run db:migrate
+bun run db:backup
+# หยุด server ก่อน restore; target ต้องเป็น path ใหม่
+DB_PATH=data/restored.sqlite bun run db:restore backups/<backup-file>.sqlite
+```
+
+backup ใช้ SQLite `VACUUM INTO`, restore ตรวจ integrity/foreign keys และไม่เขียนทับฐานข้อมูลเดิม ต้องสำรอง `data/files` (ไฟล์แนบ) และ encryption key เพิ่มด้วย
+
+Production: ใช้ HTTPS reverse proxy, ตั้ง `NODE_ENV=production`, `APP_ORIGIN` เป็น origin จริง, ใช้ volume ถาวรสำหรับ `data` และเก็บ secret นอก Git ระบบใช้ cookie HTTPOnly/SameSite, Argon2id, AES-256-GCM, audit log ที่ห้ามแก้/ลบ และไฟล์แนบที่ตรวจสิทธิ์ก่อนดาวน์โหลด SQLite เหมาะกับ single-instance ในรุ่นนี้
+
+## ภาพหน้าจอ
+
+![Dashboard](docs/qa/dashboard-desktop.png)
+
+ภาพ [บุคลากรบนมือถือ](docs/qa/employees-mobile.png)
