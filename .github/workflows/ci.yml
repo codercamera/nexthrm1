@@ -1,0 +1,38 @@
+name: Verify HRM
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.3'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: bun run verify
+      - run: npx playwright install --with-deps chromium
+      - name: Disposable demo and browser tests
+        env:
+          ENCRYPTION_KEY: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          DB_PATH: data/qa.sqlite
+          SETUP_EMAIL: admin@example.test
+          SETUP_PASSWORD: Strong-ci-test-password-123
+          TEST_PASSWORD: Strong-ci-test-password-123
+          TEST_START_SERVER: '1'
+        run: |
+          bun run demo
+          bun run test:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-results
+          path: test-results/
