@@ -13,7 +13,7 @@
 ```bash
 git clone https://github.com/codercamera/nexthrm1.git
 cd nexthrm1
-bun install
+bun install --frozen-lockfile
 cp .env.example .env
 openssl rand -hex 32
 ```
