@@ -17,7 +17,9 @@
     "test:browser": "node tests/browser.mjs",
     "format": "prettier --write src scripts tests",
     "demo": "bun scripts/demo.ts",
-    "db:seed": "bun scripts/seed.ts"
+    "db:seed": "bun scripts/seed.ts",
+    "start:seed": "bun scripts/start-seed.ts",
+    "db:status": "bun scripts/db-status.ts"
   },
   "dependencies": {
     "hono": "^4.13.13",

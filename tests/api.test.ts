@@ -632,7 +632,7 @@ test("payroll reconciliation, versions, duties and immutable locked cycle", asyn
   );
   for (let d = 1; d <= 31; d++) {
     const day = "2026-01-" + String(d).padStart(2, "0");
-    if ([0, 6].includes(new Date(day).getDay())) continue;
+    if ([0, 6].includes(new Date(day).getUTCDay())) continue;
     s.insert("attendance_records", {
       id: uuid(),
       employee_id: employeeId,

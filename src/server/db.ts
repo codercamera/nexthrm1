@@ -1,4 +1,5 @@
 import { Database } from "bun:sqlite";
+import { dataPaths } from "./config";
 import { mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 export type Row = Record<string, any>;
@@ -13,7 +14,7 @@ export const today = () =>
   }).format(new Date());
 export const hash = (value: string) =>
   new Bun.CryptoHasher("sha256").update(value).digest("hex");
-export function openDb(path = process.env.DB_PATH || "data/hrm.sqlite") {
+export function openDb(path = dataPaths().database) {
   if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
   const db = new Database(path, { create: true });
   db.exec(

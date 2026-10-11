@@ -5,7 +5,7 @@
 | การตรวจ | ผล |
 |---|---|
 | TypeScript `tsc --noEmit` | ผ่าน |
-| Bun API / transport / leave accrual | 47 passed, 0 failed, 173 assertions |
+| Bun API / transport / leave accrual | 51 passed, 0 failed, 212 assertions |
 | Vite production build | ผ่าน; React/Tailwind build สำเร็จ |
 | Chromium browser | ผ่าน; ไม่มี uncaught page errors |
 | Desktop 1440×1000 | login, dashboard/data loading, employee create, delete confirmation, employee report print/PDF |
@@ -40,3 +40,17 @@ Browser script สร้าง screenshots และ employee PDF ใน `test-r
 ## Seed regression checks
 
 เพิ่ม `tests/seed.test.ts` 4 กรณี: ตรวจความสัมพันธ์ foreign keys/ตัวเลขเงินเดือนและสลิป, รันซ้ำไม่เพิ่มข้อมูลหรือ reset fixture, employee login/self scope/cross-company denial และ CLI ปฏิเสธไฟล์ฐานข้อมูลเดิม/production พร้อมลบ staging file เมื่อ seed ไม่สำเร็จ
+
+## Dependency installation regression
+
+สร้าง `package-lock.json` ใหม่ในโฟลเดอร์ว่างโดยไม่ใช้ node_modules จาก workspace อื่น และเพิ่ม `bun.lock` ที่อ้างแพ็กเกจจาก registry ทดสอบ `bun install` (migrate จาก npm lockfile) และ `bun install --frozen-lockfile` ในสองโฟลเดอร์ใหม่ผ่าน ตรวจว่าไม่มี `file:`/local path/link dependency ใน lockfiles และรันทดสอบ 47 กรณี, TypeScript และ production build ด้วย dependency ชุดใหม่ผ่าน แก้วันที่ใน attendance test ให้ใช้ UTC เพื่อไม่ขึ้นกับ timezone เครื่อง
+
+Chromium smoke test ผ่านอีกครั้งด้วย dependency จาก clean install: login/data loading, employee create/delete, print PDF, mobile navigation/no overflow, dark mode และ English ไม่มี page runtime errors
+
+## Login / lockout regression
+
+เพิ่มการทดสอบ 5 failed attempts ทำให้ล็อก, valid password ขณะ locked ยังคงปฏิเสธและไม่เพิ่มเวลา/counter, หลัง expiry เริ่มนับ failure ใหม่ และ successful login ล้าง lock ตรวจคำสั่ง `start:seed` บน HTTP server จริงพร้อมตั้ง DB_PATH ให้เป็นไฟล์ผิดโดยเจตนา: เลือกฐานข้อมูล seed ได้และ admin login คืน HTTP 200 ไม่สร้างไฟล์ DB_PATH ผิด `db:status` อ่านค่า path/สถานะโดยไม่สร้างฐานข้อมูล
+
+## Railway deployment preparation
+
+เพิ่ม 3 automated tests สำหรับ runtime config/volume paths, idempotent first-run setup และ production-style child server: login/secure cookies, upload file, SIGTERM shutdown, restart ด้วย volume เดิมและค่า setup password ใหม่, login ด้วย password เดิม, database/file persistence และ CSRF rejection ผ่านทั้งหมด Docker build ถูกเพิ่มใน CI แต่ไม่ได้รัน local เพราะไม่มี Docker daemon และยังไม่ได้ deploy service จริงบน Railway

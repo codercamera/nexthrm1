@@ -1,7 +1,7 @@
 name: Verify HRM
 on:
   push:
-    branches: [main]
+    branches: [main, host/railway]
   pull_request:
 permissions:
   contents: read
@@ -16,8 +16,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
-      - run: npm ci
+      - run: bun install --frozen-lockfile
       - run: bun run verify
       - run: npx playwright install --with-deps chromium
       - name: Disposable demo and browser tests
@@ -36,3 +35,6 @@ jobs:
         with:
           name: browser-results
           path: test-results/
+
+      - name: Build deployment image
+        run: docker build -t nexthrm1:ci .

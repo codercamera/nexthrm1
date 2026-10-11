@@ -6,6 +6,10 @@
 
 อ่าน [ขอบเขตและข้อจำกัด](docs/COVERAGE.md) ก่อนนำไปใช้จริง รุ่นนี้ยังมีรายการขั้นสูงของ spec ที่ไม่ครบ และต้องตรวจรับกฎ HR/เงินเดือนกับผู้ใช้งานจริง
 
+## Deploy บน Railway
+
+ใช้ branch `host/railway` และอ่าน [คู่มือตั้งค่า Railway](docs/RAILWAY.md) Dockerfile build React และรัน Bun/Hono ใน service เดียว ต้อง attach persistent volume สำหรับ SQLite/ไฟล์แนบ และกำหนด ENCRYPTION_KEY กับ public HTTPS origin รองรับตั้ง admin ครั้งแรกด้วย INITIAL_SETUP แบบไม่ reset เมื่อ redeploy
+
 ## ติดตั้ง
 
 ต้องมี Bun 1.4.3+ และ Git; Node 22+ ใช้สำหรับ browser tests
@@ -13,7 +17,7 @@
 ```bash
 git clone https://github.com/codercamera/nexthrm1.git
 cd nexthrm1
-bun install
+bun install --frozen-lockfile
 cp .env.example .env
 openssl rand -hex 32
 ```
@@ -54,7 +58,7 @@ TEST_PASSWORD=Your-test-password-123 TEST_START_SERVER=1 bun run test:browser
 ```bash
 # ตั้ง ENCRYPTION_KEY ใน .env ก่อน และใช้ฐานข้อมูลทดสอบแยก
 SEED_PASSWORD='Your-seed-password-123' bun run db:seed
-DB_PATH=data/seed.sqlite bun start
+bun run start:seed
 ```
 
 Login ด้วย workspace **`seed`**; ทุกบัญชีใช้รหัสผ่านที่กำหนดใน `SEED_PASSWORD`
@@ -76,6 +80,17 @@ Login ด้วย workspace **`seed`**; ทุกบัญชีใช้รห
 `db:seed` ใช้ `SEED_DB_PATH` (ค่าเริ่มต้น `data/seed.sqlite`) แยกจาก `DB_PATH`; ปฏิเสธฐานข้อมูลที่มีข้อมูลอื่นและ production สร้างใน staging file ก่อนเผยแพร่ไฟล์เมื่อสำเร็จ รันซ้ำบน seed เดิมเป็น no-op ไม่ reset password/ข้อมูลที่แก้ภายหลัง ถ้าเปลี่ยน password หรือ encryption key ให้สร้าง seed ใน path ใหม่ วันที่เริ่มต้นเป็นวันปัจจุบัน Asia/Bangkok หรือกำหนด `SEED_DATE=YYYY-MM-DD` สำหรับ snapshot ทดสอบ
 
 `bun run demo` เดิมยังใช้ชุด 5 พนักงานสำหรับ browser smoke test และไม่ได้เปลี่ยนให้ใช้ seed นี้
+
+## แก้ปัญหา login
+
+สำหรับบัญชีจาก seed ให้รัน `bun run start:seed` ซึ่งเลือก `SEED_DB_PATH` โดยตรง แม้ `.env` จะตั้ง `DB_PATH=data/hrm.sqlite` อยู่ หากใช้ `bun start` ธรรมดาต้องตั้ง `DB_PATH` ให้ตรงกับฐานข้อมูลที่สร้างบัญชีไว้
+
+- Seed: workspace `seed`, admin `admin@example.test`, password คือ `SEED_PASSWORD` **ตอนสร้าง seed ครั้งแรก** เปลี่ยนค่าใน `.env` หรือรัน seed ซ้ำไม่เปลี่ยนรหัสผ่านในฐานข้อมูล
+- Demo: workspace `demo`, password คือ `SETUP_PASSWORD` ตอนสร้าง demo
+- Setup: workspace คือ `tenants.code` ที่คำสั่ง setup แสดง ไม่ใช่ชื่อบริษัทหรือชื่อ workspace
+- ผิด 5 ครั้งจะล็อก 15 นาที การลองระหว่างถูกล็อกจะไม่ต่อเวลาล็อก รอจน `locked_until` หมดหรือให้ tenant admin อื่นปลดล็อกใน Users
+
+ตรวจฐานข้อมูล/รหัส workspace/สถานะบัญชีด้วย `bun run db:status` คำสั่งนี้อ่านอย่างเดียว ไม่สร้างฐานข้อมูลและไม่แสดง password hash/token/key ตรวจ seed โดยตรงได้ด้วย `DB_PATH=data/seed.sqlite bun run db:status` (ปรับ path หากใช้ `SEED_DB_PATH` อื่น)
 
 ## โครงสร้าง
 
@@ -101,7 +116,7 @@ DB_PATH=data/restored.sqlite bun run db:restore backups/<backup-file>.sqlite
 
 backup ใช้ SQLite `VACUUM INTO`, restore ตรวจ integrity/foreign keys และไม่เขียนทับฐานข้อมูลเดิม ต้องสำรอง `data/files` (ไฟล์แนบ) และ encryption key เพิ่มด้วย
 
-Production: ใช้ HTTPS reverse proxy, ตั้ง `NODE_ENV=production`, `APP_ORIGIN` เป็น origin จริง, ใช้ volume ถาวรสำหรับ `data` และเก็บ secret นอก Git ระบบใช้ cookie HTTPOnly/SameSite, Argon2id, AES-256-GCM, audit log ที่ห้ามแก้/ลบ และไฟล์แนบที่ตรวจสิทธิ์ก่อนดาวน์โหลด SQLite เหมาะกับ single-instance ในรุ่นนี้
+Production: ใช้ HTTPS reverse proxy, ตั้ง `NODE_ENV=production`, `APP_ORIGIN` เป็น origin จริง, ใช้ volume ถาวรสำหรับฐานข้อมูลและไฟล์แนบ และเก็บ secret นอก Git ระบบใช้ cookie HTTPOnly/SameSite, Argon2id, AES-256-GCM, audit log ที่ห้ามแก้/ลบ และไฟล์แนบที่ตรวจสิทธิ์ก่อนดาวน์โหลด SQLite เหมาะกับ single-instance ในรุ่นนี้
 
 ## ภาพหน้าจอ
 

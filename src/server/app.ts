@@ -178,13 +178,18 @@ export function createApp(
       (user.locked_until && user.locked_until > now())
     ) {
       if (user) {
-        s.update("users", user.id, {
-          failed_login_count: user.failed_login_count + 1,
-          locked_until:
-            user.failed_login_count >= 4
-              ? new Date(Date.now() + 900000).toISOString()
-              : user.locked_until,
-        });
+        // Attempts during an active lock must not restart the 15-minute window.
+        const locked = user.locked_until && user.locked_until > now();
+        if (!locked && user.status === "ACTIVE" && !valid) {
+          const failures = user.locked_until ? 1 : user.failed_login_count + 1;
+          s.update("users", user.id, {
+            failed_login_count: failures,
+            locked_until:
+              failures >= 5
+                ? new Date(Date.now() + 900000).toISOString()
+                : null,
+          });
+        }
         s.insert("audit_logs", {
           id: uuid(),
           tenant_id: user.tenant_id,

@@ -1,8 +1,9 @@
+import { dataPaths } from "../src/server/config";
 import { Database } from "bun:sqlite";
 import { existsSync, mkdirSync, copyFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 const source = process.argv[2],
-  target = process.env.DB_PATH || "data/hrm.sqlite";
+  target = dataPaths().database;
 if (!source) throw new Error("Usage: bun scripts/restore.ts <backup.sqlite>");
 if (
   existsSync(target) ||

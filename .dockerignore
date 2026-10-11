@@ -3,5 +3,11 @@ dist
 data
 backups
 .env
+.env.*
+!.env.example
 test-results
+playwright-report
 .git
+docs
+tests
+*.sqlite*
