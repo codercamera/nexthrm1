@@ -16,7 +16,8 @@
     "db:restore": "bun scripts/restore.ts",
     "test:browser": "node tests/browser.mjs",
     "format": "prettier --write src scripts tests",
-    "demo": "bun scripts/demo.ts"
+    "demo": "bun scripts/demo.ts",
+    "db:seed": "bun scripts/seed.ts"
   },
   "dependencies": {
     "hono": "^4.13.13",

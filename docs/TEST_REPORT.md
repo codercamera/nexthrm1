@@ -5,7 +5,7 @@
 | การตรวจ | ผล |
 |---|---|
 | TypeScript `tsc --noEmit` | ผ่าน |
-| Bun API / transport / leave accrual | 43 passed, 0 failed, 145 assertions |
+| Bun API / transport / leave accrual | 47 passed, 0 failed, 173 assertions |
 | Vite production build | ผ่าน; React/Tailwind build สำเร็จ |
 | Chromium browser | ผ่าน; ไม่มี uncaught page errors |
 | Desktop 1440×1000 | login, dashboard/data loading, employee create, delete confirmation, employee report print/PDF |
@@ -36,3 +36,7 @@ Browser script สร้าง screenshots และ employee PDF ใน `test-r
 ## ข้อจำกัดของผลทดสอบ
 
 อัตราประกันสังคม/ภาษีใน test เป็น fixture เพื่อทดสอบสูตร ไม่ใช่อัตราทางกฎหมาย production ผล local test ไม่ใช่ผล CI บน GitHub และไม่ใช่ UAT, load test, security audit หรือการรับรอง production อ่าน [COVERAGE](COVERAGE.md) สำหรับงานขั้นสูงที่ยังไม่ครบ
+
+## Seed regression checks
+
+เพิ่ม `tests/seed.test.ts` 4 กรณี: ตรวจความสัมพันธ์ foreign keys/ตัวเลขเงินเดือนและสลิป, รันซ้ำไม่เพิ่มข้อมูลหรือ reset fixture, employee login/self scope/cross-company denial และ CLI ปฏิเสธไฟล์ฐานข้อมูลเดิม/production พร้อมลบ staging file เมื่อ seed ไม่สำเร็จ

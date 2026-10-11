@@ -49,6 +49,34 @@ TEST_PASSWORD=Your-test-password-123 TEST_START_SERVER=1 bun run test:browser
 
 ผลทดสอบและภาพหน้าจออยู่ใน [TEST_REPORT](docs/TEST_REPORT.md) และ workflow CI อยู่ใน `.github/workflows/ci.yml`
 
+## Seed ข้อมูลทดสอบครบโมดูล
+
+```bash
+# ตั้ง ENCRYPTION_KEY ใน .env ก่อน และใช้ฐานข้อมูลทดสอบแยก
+SEED_PASSWORD='Your-seed-password-123' bun run db:seed
+DB_PATH=data/seed.sqlite bun start
+```
+
+Login ด้วย workspace **`seed`**; ทุกบัญชีใช้รหัสผ่านที่กำหนดใน `SEED_PASSWORD`
+
+| บัญชี | บทบาท |
+|---|---|
+| `admin@example.test` | ผู้ดูแล workspace และสองบริษัท |
+| `hr@example.test` | HR / จัดเตรียมเงินเดือนทั้งสองบริษัท |
+| `reviewer@example.test` | ผู้ตรวจเงินเดือน |
+| `approver@example.test` | ผู้อนุมัติเงินเดือน |
+| `employee1@example.test`, `employee7@example.test` | หัวหน้าแผนกและพนักงาน บริษัท 1/2 |
+| `employee2@example.test`–`employee6@example.test` | พนักงานบริษัท 1 |
+| `employee8@example.test`–`employee12@example.test` | พนักงานบริษัท 2 |
+
+สร้าง 2 บริษัท, พนักงาน active 12 รายและ draft 2 ราย, สาขา/แผนก/ตำแหน่ง/ระดับ, schedule/วันหยุด, ประวัติการจ้าง/ค่าตอบแทน/ประสบการณ์, บัญชีธนาคารเข้ารหัส, attendance งวดก่อนและเดือนปัจจุบัน (รวม late/incomplete), leave approved/pending/rejected, OT approved/pending, เงินเดือนงวดก่อน approved พร้อม 12 สลิปและงวดปัจจุบัน draft, ประกาศ published/draft/scheduled/group พร้อมตัวอย่างอ่าน/รับทราบและ notification
+
+ข้อมูลทั้งหมดสมมติ อัตราภาษี/ประกันสังคมเป็น test fixtures ไม่ใช่อัตรากฎหมายปัจจุบัน Payroll สร้างผ่าน API จริงโดยผู้จัดเตรียม/ผู้ตรวจ/ผู้อนุมัติคนละบัญชี
+
+`db:seed` ใช้ `SEED_DB_PATH` (ค่าเริ่มต้น `data/seed.sqlite`) แยกจาก `DB_PATH`; ปฏิเสธฐานข้อมูลที่มีข้อมูลอื่นและ production สร้างใน staging file ก่อนเผยแพร่ไฟล์เมื่อสำเร็จ รันซ้ำบน seed เดิมเป็น no-op ไม่ reset password/ข้อมูลที่แก้ภายหลัง ถ้าเปลี่ยน password หรือ encryption key ให้สร้าง seed ใน path ใหม่ วันที่เริ่มต้นเป็นวันปัจจุบัน Asia/Bangkok หรือกำหนด `SEED_DATE=YYYY-MM-DD` สำหรับ snapshot ทดสอบ
+
+`bun run demo` เดิมยังใช้ชุด 5 พนักงานสำหรับ browser smoke test และไม่ได้เปลี่ยนให้ใช้ seed นี้
+
 ## โครงสร้าง
 
 - `src/client`: React, reusable dialogs/forms/tables, mobile navigation, employee print report
